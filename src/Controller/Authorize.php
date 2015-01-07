@@ -44,8 +44,11 @@ class Authorize {
         $refreshTokenGrant = new \League\OAuth2\Server\Grant\RefreshTokenGrant();
         $server->addGrantType($refreshTokenGrant);
 
+        $authCodeGrant = new \League\OAuth2\Server\Grant\AuthCodeGrant();
+        $server->addGrantType($authCodeGrant);
 
         try {
+            /* \League\OAuth2\Server\Grant\AuthCodeGrant->checkAuthorizeParams(): */
             $authParams = $server->getGrantType('authorization_code')->checkAuthorizeParams();
 
         } catch (OAuthException $e) {
