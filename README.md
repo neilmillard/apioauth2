@@ -1,7 +1,7 @@
 # apioauth2
 skel app for api with oauth2
 
-Uses http://www.slimframework.com/ "slim/slim", http://oauth2.thephpleague.com/ "league/oauth2-server" and Laravel's Eloquent
+Uses http://www.slimframework.com/ "slim/slim", http://oauth2.thephpleague.com/ "league/oauth2-server" and http://laravel.com/docs/eloquent "illuminate/database"
 
 create your database
 
