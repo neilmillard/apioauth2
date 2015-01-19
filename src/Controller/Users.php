@@ -17,6 +17,7 @@ class Users {
     protected $request;
     /** @var  \Slim\Http\Response */
     protected $response;
+    /** @var  \RkaSc\Slim */
     protected $app;
 
     public function index()
@@ -38,10 +39,6 @@ class Users {
                 $user['email'] = $result['email'];
             }
 
-            if ($resourceServer->getAccessToken()->hasScope('photo')) {
-                $user['photo'] = $result['photo'];
-            }
-
             $users[] = $user;
         }
 
@@ -49,12 +46,12 @@ class Users {
         return;
     }
 
-    public function user($username)
+    public function user($email)
     {
         /** @var \League\OAuth2\Server\ResourceServer $resourceServer */
         $resourceServer = $this->app->oauthServer;
 
-        $result = (new Model\Users())->get($username);
+        $result = (new Model\Users())->get($email);
 
         if (count($result) === 0) {
             throw new NotFoundException();
@@ -83,10 +80,10 @@ class Users {
         // get the json parse array ( Courtesy of Slim_Middleware_ContentTypes())
         $body = $this->request->getBody();
 
-        if (!$resourceServer->getAccessToken()->hasScope('admin')) {
+        if (!$resourceServer->getAccessToken()->hasScope('useradmin')) {
             // Check some fields username, name and email are required
             $rules = array(
-                'username'  => 'required|min:5',
+                'password'  => 'required|min:5',
                 'name'      => 'required',
                 'email'     => 'required|email|unique:users',
             );
@@ -110,7 +107,7 @@ class Users {
 
             // and create our object
             $newuser = ModelUsers::create(array());
-            $newuser->username  = $body['username'];
+            $newuser->username  = $body['email'];
             $newuser->password  = password_hash($body['password'], PASSWORD_DEFAULT);
             $newuser->name      = $body['name'];
             $newuser->email     = $body['email'];

@@ -19,42 +19,24 @@ class Accesstoken {
     protected $response;
     protected $app;
 
+    /**
+     * is POST only
+     *
+     *
+     */
     public function index()
     {
-        // Set up the OAuth 2.0 authorization server
-        $server = new \League\OAuth2\Server\AuthorizationServer();
-        $server->setSessionStorage(new Storage\SessionStorage());
-        $server->setAccessTokenStorage(new Storage\AccessTokenStorage());
-        $server->setRefreshTokenStorage(new Storage\RefreshTokenStorage());
-        $server->setClientStorage(new Storage\ClientStorage());
-        $server->setScopeStorage(new Storage\ScopeStorage());
-        $server->setAuthCodeStorage(new Storage\AuthCodeStorage());
-
-        $clientCredentials = new \League\OAuth2\Server\Grant\ClientCredentialsGrant();
-        $server->addGrantType($clientCredentials);
-
-        $passwordGrant = new \League\OAuth2\Server\Grant\PasswordGrant();
-        $passwordGrant->setVerifyCredentialsCallback(function ($username, $password) {
-            $result = (new Model\Users())->get($username);
-            if (count($result) !== 1) {
-                return false;
-            }
-
-            if (password_verify($password, $result[0]['password'])) {
-                return $username;
-            }
-
-            return false;
-        });
-        $server->addGrantType($passwordGrant);
-
-        $refreshTokenGrant = new \League\OAuth2\Server\Grant\RefreshTokenGrant();
-        $server->addGrantType($refreshTokenGrant);
-
+        /** @var \League\OAuth2\Server\AuthorizationServer $server */
+        $server = $this->app->authorizationServer;
 
         try {
             $response = $server->issueAccessToken();
 
+            /*
+             * $this->assertTrue(array_key_exists('access_token', $response));
+             * $this->assertTrue(array_key_exists('token_type', $response));
+             * $this->assertTrue(array_key_exists('expires_in', $response));
+             */
             $this->response->setBody(json_encode($response));
             return;
         } catch (OAuthException $e) {

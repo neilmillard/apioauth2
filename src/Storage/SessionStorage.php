@@ -106,4 +106,11 @@ class SessionStorage extends AbstractStorage implements SessionInterface
                                 'scope'         =>  $scope->getId(),
                             ]);
     }
+
+    public function deleteSession($ownerId)
+    {
+        Capsule::table('oauth_sessions')
+            ->where('owner_id', $ownerId)
+            ->delete();
+    }
 }

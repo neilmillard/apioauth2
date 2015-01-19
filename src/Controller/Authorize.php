@@ -12,44 +12,35 @@ class Authorize {
     protected $response;
     protected $app;
 
+    /**
+     * index from path /api/v1/authorize/
+     * expects $_GET array to contain
+     * 'grant_type'    => 'authorization_code',
+     * 'client_id'     =>  'testapp', // the client_id
+     * 'client_secret' =>  'foobar', // the client_secret. not checked in checkAuthorizeParams. checked in CompleteFlow
+     * 'redirect_uri'  =>  'http://foo/bar', // the client redirect, this is checked too
+     * 'response_typ'          =>  'code', // default is code
+     * 'username'  => 'user1@example.com', // the existing user you want to authorize
+     * 'password' => 'Pa55word', // the username password.
+     * @throws \League\OAuth2\Server\Exception\InvalidGrantException
+     * returns code= to redirect url
+     */
     public function index()
     {
-        // Set up the OAuth 2.0 authorization server
-        $server = new \League\OAuth2\Server\AuthorizationServer();
-        $server->setSessionStorage(new Storage\SessionStorage());
-        $server->setAccessTokenStorage(new Storage\AccessTokenStorage());
-        $server->setRefreshTokenStorage(new Storage\RefreshTokenStorage());
-        $server->setClientStorage(new Storage\ClientStorage());
-        $server->setScopeStorage(new Storage\ScopeStorage());
-        $server->setAuthCodeStorage(new Storage\AuthCodeStorage());
-
-        $clientCredentials = new \League\OAuth2\Server\Grant\ClientCredentialsGrant();
-        $server->addGrantType($clientCredentials);
-
-        $passwordGrant = new \League\OAuth2\Server\Grant\PasswordGrant();
-        $passwordGrant->setVerifyCredentialsCallback(function ($username, $password) {
-            $result = (new Model\Users())->get($username);
-            if (count($result) !== 1) {
-                return false;
-            }
-
-            if (password_verify($password, $result[0]['password'])) {
-                return $username;
-            }
-
-            return false;
-        });
-        $server->addGrantType($passwordGrant);
-
-        $refreshTokenGrant = new \League\OAuth2\Server\Grant\RefreshTokenGrant();
-        $server->addGrantType($refreshTokenGrant);
-
-        $authCodeGrant = new \League\OAuth2\Server\Grant\AuthCodeGrant();
-        $server->addGrantType($authCodeGrant);
-
+        /** @var \League\OAuth2\Server\AuthorizationServer $server */
+        $server = $this->app->authorizationServer;
+        $errors = [];
         try {
             /* \League\OAuth2\Server\Grant\AuthCodeGrant->checkAuthorizeParams(): */
             $authParams = $server->getGrantType('authorization_code')->checkAuthorizeParams();
+            $email = $this->request->get('username');
+            if (is_null($email)) {
+                throw new \League\OAuth2\Server\Exception\InvalidRequestException('username');
+            }
+            $password = $this->request->get('password');
+            if (is_null($email)) {
+                throw new \League\OAuth2\Server\Exception\InvalidRequestException('password');
+            }
 
         } catch (OAuthException $e) {
             $this->response->setBody(
@@ -60,24 +51,65 @@ class Authorize {
             $this->response->setStatus( $e->httpStatusCode );
             return;
         }
-        
+
         // TODO: workflow for scope authorization
+        // TODO: check if user already has authorization
         // Normally at this point you would show the user a sign-in screen and ask them to authorize the requested scopes
-        
-        // ...
-        
-        // ...
-        
-        // ...
-        
-        // Create a new authorize request which will respond with a redirect URI that the user will be redirected to
-        
-        $redirectUri = $server->getGrantType('authorization_code')->newAuthorizeRequest('user', 1, $authParams);
-        
-        $response = [
-        		'Location'  =>  $redirectUri
-        ];
-                
+
+        $credentials = array(
+            'email' => $email,
+            'password' => $password,
+        );
+        // TODO: function candidate to authorise user
+        try
+        {
+            $user = \Cartalyst\Sentry\Facades\Native\Sentry::instance()->authenticate($credentials, false);
+        }
+        catch (\Cartalyst\Sentry\Users\WrongPasswordException $e)
+        {
+            $errors['password'] = "Password does not match.";
+        }
+        catch (\Cartalyst\Sentry\Users\UserNotFoundException $e)
+        {
+            $errors['email'] = "Email is not found.";
+        }
+        catch (\Cartalyst\Sentry\Users\UserNotActivatedException $e)
+        {
+            $errors['email'] = "User Not Activated";
+        }
+            // The following is only required if the throttling is enabled
+        catch (\Cartalyst\Sentry\Throttling\UserSuspendedException $e)
+        {
+            $errors['email'] = 'User is suspended.';
+        }
+        catch (\Cartalyst\Sentry\Throttling\UserBannedException $e)
+        {
+            $errors['email'] = 'User is banned.';
+        }
+
+        if (count($errors) > 0) {
+            $response = [
+                'error'     =>  'error',
+                'message'   =>  $errors,
+            ];
+        } else {
+            // Create a new authorize request which will respond with a redirect URI that the user will be redirected to
+
+            try {
+                $redirectUri = $server->getGrantType('authorization_code')->newAuthorizeRequest('user', $user->getId(), $authParams);
+
+                $response = [
+                    'Location'  =>  $redirectUri
+                ];
+            } catch (\Illuminate\Database\QueryException $e){
+                $response = [
+                    'error'     =>  'PDO error',
+                    'message'   =>  $e->getMessage()
+                ];
+            }
+
+        }
+
         $this->response->setBody(json_encode($response));
         return;
     }

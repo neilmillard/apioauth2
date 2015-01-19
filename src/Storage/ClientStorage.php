@@ -25,7 +25,7 @@ class ClientStorage extends AbstractStorage implements ClientInterface
 
         if ($redirectUri) {
             $query->join('oauth_client_redirect_uris', 'oauth_clients.id', '=', 'oauth_client_redirect_uris.client_id')
-                  ->select(['oauth_clients.*', 'oauth_client_redirect_uris.*'])
+                  ->select(['oauth_clients.*', 'oauth_client_redirect_uris.redirect_uri'])
                   ->where('oauth_client_redirect_uris.redirect_uri', $redirectUri);
         }
 

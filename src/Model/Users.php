@@ -9,12 +9,12 @@ class Users extends Eloquent
 {
     protected $hidden = array('id','created_at','updated_at', 'password');
 
-    public function get($username = null)
+    public function get($email = null)
     {
-        $query = Capsule::table('users')->select(['username', 'password', 'name', 'email', 'photo']);
+        $query = Capsule::table('users')->select(['email', 'password', 'first_name', 'last_name']);
 
-        if ($username !== null) {
-            $query->where('username', '=', $username);
+        if ($email !== null) {
+            $query->where('email', '=', $email);
         }
 
         $result = $query->get();

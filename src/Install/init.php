@@ -23,33 +23,130 @@ $capsule->setAsGlobal();
 //$capsule->bootEloquent();
 
 /******************************************************************************/
+print 'Creating candles table'.PHP_EOL;
+if (!Capsule::schema()->hasTable('users')){
+    Capsule::schema()->create('candles', function($table) {
+        /** @var \Illuminate\Database\Schema\Blueprint $table */
+        $table->increments('id');
+        $table->date('date');
+        $table->string('candletime');
+        $table->string('instrument');
+        $table->double('open');
+        $table->double('high');
+        $table->double('low');
+        $table->double('close');
+        $table->tinyInteger('complete');
+        $table->datetime('created_at');
+        $table->datetime('updated_at');
+        $table->index('instrument');
+    });
+}
+
 print 'Creating users table'.PHP_EOL;
 
-Capsule::schema()->create('users', function ($table) {
-    $table->increments('id');
-    $table->string('username');
-    $table->string('password');
-    $table->string('name');
-    $table->string('email');
-    $table->string('photo');
-    $table->datetime('created_at');
-    $table->datetime('updated_at');
-});
+if (!Capsule::schema()->hasTable('users')){
+    Capsule::schema()->create('users', function($table)
+    {
+        $table->increments('id');
+        $table->string('email');
+        $table->string('password');
+        $table->text('permissions')->nullable();
+        $table->boolean('activated')->default(0);
+        $table->string('activation_code')->nullable();
+        $table->timestamp('activated_at')->nullable();
+        $table->timestamp('last_login')->nullable();
+        $table->string('persist_code')->nullable();
+        $table->string('reset_password_code')->nullable();
+        $table->string('first_name')->nullable();
+        $table->string('last_name')->nullable();
+        $table->timestamps();
+        // We'll need to ensure that MySQL uses the InnoDB engine to
+        // support the indexes, other engines aren't affected.
+        $table->engine = 'InnoDB';
+        $table->unique('email');
+        $table->index('activation_code');
+        $table->index('reset_password_code');
+    });
+}
+/**
+ * create table for sentry group
+ */
+if (!Capsule::schema()->hasTable('groups')){
+    Capsule::schema()->create('groups', function($table)
+    {
+        $table->increments('id');
+        $table->string('name');
+        $table->text('permissions')->nullable();
+        $table->timestamps();
+        // We'll need to ensure that MySQL uses the InnoDB engine to
+        // support the indexes, other engines aren't affected.
+        $table->engine = 'InnoDB';
+        $table->unique('name');
+    });
+}
+/**
+ * create user-group relation
+ */
+if (!Capsule::schema()->hasTable('users_groups')){
+    Capsule::schema()->create('users_groups', function($table)
+    {
+        $table->integer('user_id')->unsigned();
+        $table->integer('group_id')->unsigned();
+        // We'll need to ensure that MySQL uses the InnoDB engine to
+        // support the indexes, other engines aren't affected.
+        $table->engine = 'InnoDB';
+        $table->primary(array('user_id', 'group_id'));
+    });
+}
+/**
+ * create throttle table
+ */
+if (!Capsule::schema()->hasTable('throttle')){
+    Capsule::schema()->create('throttle', function($table)
+    {
+        $table->increments('id');
+        $table->integer('user_id')->unsigned();
+        $table->string('ip_address')->nullable();
+        $table->integer('attempts')->default(0);
+        $table->boolean('suspended')->default(0);
+        $table->boolean('banned')->default(0);
+        $table->timestamp('last_attempt_at')->nullable();
+        $table->timestamp('suspended_at')->nullable();
+        $table->timestamp('banned_at')->nullable();
+        // We'll need to ensure that MySQL uses the InnoDB engine to
+        // support the indexes, other engines aren't affected.
+        $table->engine = 'InnoDB';
+        $table->index('user_id');
+    });
+}
+
+//Capsule::schema()->create('users', function ($table) {
+//    $table->increments('id');
+//    $table->string('username');
+//    $table->string('password');
+//    $table->string('name');
+//    $table->string('email');
+//    $table->string('photo');
+//    $table->datetime('created_at');
+//    $table->datetime('updated_at');
+//});
 
 Capsule::table('users')->insert([
-    'username'  =>  'neilmillard',
-    'password'  =>  password_hash('custard', PASSWORD_DEFAULT),
-    'name'      =>  'Neil Millard',
-    'email'     =>  'neil@neilmillard.com',
-    'photo'     =>  'https://s.gravatar.com/avatar/2bbf2bab0c949c6a29c7fa791343797a',
+    'email'         =>  'admin@api.neilmillard.com',
+    'password'      =>  password_hash('cider', PASSWORD_DEFAULT),
+    'first_name'    =>  'Website',
+    'last_name'     => 'Administrator',
+    'activated'     =>  '1',
+    'permissions'   => '{ "admin" : 1 }',
 ]);
 
 Capsule::table('users')->insert([
-    'username'  =>  'philsturgeon',
-    'password'  =>  password_hash('cider', PASSWORD_DEFAULT),
-    'name'      =>  'Phil Sturgeon',
-    'email'     =>  'email@philsturgeon.co.uk',
-    'photo'     =>  'https://s.gravatar.com/avatar/14df293d6c5cd6f05996dfc606a6a951',
+    'email'         =>  'neil@neilmillard.com',
+    'password'      =>  password_hash('custard', PASSWORD_DEFAULT),
+    'first_name'    =>  'Neil',
+    'last_name'     => 'Millard',
+    'activated'     => '1',
+    'permissions'   => '{ "admin" : 1 }',
 ]);
 
 /******************************************************************************/
@@ -64,9 +161,9 @@ Capsule::schema()->create('oauth_clients', function ($table) {
 });
 
 Capsule::table('oauth_clients')->insert([
-    'id'        =>  'testclient',
-    'secret'    =>  'secret',
-    'name'      =>  'Test Client',
+    'id'        =>  'fxmasterclient',
+    'secret'    =>  'topSecret5555',
+    'name'      =>  'FXMaster Client',
 ]);
 
 /******************************************************************************/
@@ -80,8 +177,8 @@ Capsule::schema()->create('oauth_client_redirect_uris', function ($table) {
 });
 
 Capsule::table('oauth_client_redirect_uris')->insert([
-    'client_id'     =>  'testclient',
-    'redirect_uri'  =>  'http://example.com/redirect',
+    'client_id'     =>  'fxmasterclient',
+    'redirect_uri'  =>  'http://www.fxmaster.dev/redirect',
 ]);
 
 /******************************************************************************/
@@ -110,8 +207,8 @@ Capsule::table('oauth_scopes')->insert([
 ]);
 
 Capsule::table('oauth_scopes')->insert([
-    'id'            =>  'admin',
-    'description'   =>  'Admin rights. Create users etc',
+    'id'            =>  'useradmin',
+    'description'   =>  'User Admin rights. Create users etc',
 ]);
 
 /******************************************************************************/
@@ -130,20 +227,20 @@ Capsule::schema()->create('oauth_sessions', function ($table) {
 
 Capsule::table('oauth_sessions')->insert([
     'owner_type'    =>  'client',
-    'owner_id'      =>  'testclient',
-    'client_id'     =>  'testclient',
+    'owner_id'      =>  'fxmasterclient',
+    'client_id'     =>  'fxmasterclient',
 ]);
 
 Capsule::table('oauth_sessions')->insert([
     'owner_type'    =>  'user',
     'owner_id'      =>  '1',
-    'client_id'     =>  'testclient',
+    'client_id'     =>  'fxmasterclient',
 ]);
 
 Capsule::table('oauth_sessions')->insert([
     'owner_type'    =>  'user',
     'owner_id'      =>  '2',
-    'client_id'     =>  'testclient',
+    'client_id'     =>  'fxmasterclient',
 ]);
 
 /******************************************************************************/
@@ -165,14 +262,8 @@ Capsule::table('oauth_access_tokens')->insert([
 ]);
 
 Capsule::table('oauth_access_tokens')->insert([
-    'access_token'  =>  'iamalex',
+    'access_token'  =>  'iamneil',
     'session_id'    =>  '2',
-    'expire_time'   =>  time() + 86400,
-]);
-
-Capsule::table('oauth_access_tokens')->insert([
-    'access_token'  =>  'iamphil',
-    'session_id'    =>  '3',
     'expire_time'   =>  time() + 86400,
 ]);
 
@@ -230,12 +321,17 @@ Capsule::table('oauth_access_token_scopes')->insert([
 ]);
 
 Capsule::table('oauth_access_token_scopes')->insert([
-    'access_token'  =>  'iamphil',
+    'access_token'  =>  'iamgod',
+    'scope'         =>  'useradmin',
+]);
+
+Capsule::table('oauth_access_token_scopes')->insert([
+    'access_token'  =>  'iamneil',
     'scope'         =>  'email',
 ]);
 
 Capsule::table('oauth_access_token_scopes')->insert([
-    'access_token'  =>  'iamalex',
+    'access_token'  =>  'iamneil',
     'scope'         =>  'photo',
 ]);
 

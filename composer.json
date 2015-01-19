@@ -5,8 +5,8 @@
     "version": "0.1",
     "licence": "MIT",
     "require" : {
-        "slim/slim": "2.5.0",
-        "league/oauth2-server": "4.0.5",
+        "slim/slim": "2.5.*",
+        "league/oauth2-server": "4.0.*",
         "akrabat/rka-slim-controller": "1.0.3",
         "monolog/monolog": "1.11.0",
         "illuminate/database": "v4.2.16",
@@ -14,6 +14,10 @@
         "ircmaxell/password-compat": "v1.0.4",
         "illuminate/config": "v4.2.16",
         "vlucas/phpdotenv": "2.x-dev",
+        "roave/security-advisories": "dev-master",
+        "slim/views": "0.1.3",
+        "twig/twig": "v1.16.3",
+        "cartalyst/sentry": "v2.1.4",
         "php" : ">=5.5"
     },
     "keywords" : [
